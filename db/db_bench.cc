@@ -63,6 +63,9 @@ static const char* FLAGS_benchmarks =
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
 
+//It will limit the range of keys to write to be [1, FLAGS_DoWrite_max_key]
+static int FLAGS_DoWrite_max_key = 100;
+
 // Number of read operations to do.  If negative, do FLAGS_num reads.
 static int FLAGS_reads = -1;
 
@@ -724,7 +727,7 @@ class Benchmark {
     for (int i = 0; i < num_; i += entries_per_batch_) {
       batch.Clear();
       for (int j = 0; j < entries_per_batch_; j++) {
-        const int k = seq ? i+j : (thread->rand.Next() % FLAGS_num);
+        const int k = seq ? i+j : (thread->rand.Next() % FLAGS_DoWrite_max_key);
         char key[100];
         snprintf(key, sizeof(key), "%016d", k);
         batch.Put(key, gen.Generate(value_size_));
@@ -943,6 +946,9 @@ int main(int argc, char** argv) {
       FLAGS_use_existing_db = n;
     } else if (sscanf(argv[i], "--num=%d%c", &n, &junk) == 1) {
       FLAGS_num = n;
+    } else if (sscanf(argv[i], "--dowrite_max_key=%d%c", &n, &junk) == 1) {
+      FLAGS_DoWrite_max_key = n;
+      // printf("FLAGS_DoWrite_max_key: %d\n", n);
     } else if (sscanf(argv[i], "--reads=%d%c", &n, &junk) == 1) {
       FLAGS_reads = n;
     } else if (sscanf(argv[i], "--threads=%d%c", &n, &junk) == 1) {
