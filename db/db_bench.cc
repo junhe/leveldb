@@ -63,8 +63,12 @@ static const char* FLAGS_benchmarks =
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
 
-//It will limit the range of keys to write to be [1, FLAGS_DoWrite_max_key]
+// It will limit the range of keys to write to be [1, FLAGS_DoWrite_max_key]
 static int FLAGS_DoWrite_max_key = 1000000;
+
+// Value passed to random.Skewed(int max_log)
+// -1 is to turn off skewing.
+static int FLAGS_DoWrite_skew_max_log = -1;
 
 // Number of read operations to do.  If negative, do FLAGS_num reads.
 static int FLAGS_reads = -1;
@@ -727,8 +731,15 @@ class Benchmark {
     for (int i = 0; i < num_; i += entries_per_batch_) {
       batch.Clear();
       for (int j = 0; j < entries_per_batch_; j++) {
-        const int k = seq ? i+j : (thread->rand.Next() % FLAGS_DoWrite_max_key);
+        int k;
         char key[100];
+
+        if (FLAGS_DoWrite_skew_max_log == -1) {
+            k = seq ? i+j : (thread->rand.Next() % FLAGS_DoWrite_max_key);
+        } else {
+            k = seq ? i+j : (thread->rand.Skewed(FLAGS_DoWrite_skew_max_log) % FLAGS_DoWrite_max_key);
+        }
+
         snprintf(key, sizeof(key), "%016d", k);
         batch.Put(key, gen.Generate(value_size_));
         bytes += value_size_ + strlen(key);
@@ -948,7 +959,8 @@ int main(int argc, char** argv) {
       FLAGS_num = n;
     } else if (sscanf(argv[i], "--dowrite_max_key=%d%c", &n, &junk) == 1) {
       FLAGS_DoWrite_max_key = n;
-      // printf("FLAGS_DoWrite_max_key: %d\n", n);
+    } else if (sscanf(argv[i], "--dowrite_skew_max_log=%d%c", &n, &junk) == 1) {
+      FLAGS_DoWrite_skew_max_log = n;
     } else if (sscanf(argv[i], "--reads=%d%c", &n, &junk) == 1) {
       FLAGS_reads = n;
     } else if (sscanf(argv[i], "--threads=%d%c", &n, &junk) == 1) {
